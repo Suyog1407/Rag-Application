@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Application</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding: 40px 20px; }
+        .container { width: 100%; max-width: 700px; }
+        h1 { font-size: 28px; margin-bottom: 8px; color: #111; }
+        p.subtitle { color: #666; margin-bottom: 32px; }
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 16px; margin-bottom: 16px; color: #333; }
+        input[type="file"] { display: block; margin-bottom: 12px; font-size: 14px; }
+        button { background: #111; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        button:hover { background: #333; }
+        button:disabled { background: #999; cursor: not-allowed; }
+        #upload-status { margin-top: 12px; font-size: 14px; color: #555; }
+        #upload-status.success { color: #16a34a; }
+        #upload-status.error { color: #dc2626; }
+        textarea { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 14px; resize: vertical; min-height: 80px; margin-bottom: 12px; font-family: inherit; }
+        textarea:focus { outline: none; border-color: #111; }
+        #chat-history { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
+        .chat-item { background: #f9f9f9; border-radius: 8px; padding: 16px; }
+        .chat-question { font-size: 13px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .chat-answer { font-size: 14px; line-height: 1.7; color: #333; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #111; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .thinking { display: flex; align-items: center; font-size: 14px; color: #888; padding: 12px 0; }
+        .answer-item { display: flex; gap: 10px; margin: 8px 0; line-height: 1.6; }
+        .answer-num { font-weight: 700; color: #111; min-width: 20px; }
+        body.dark .answer-num { color: #f0f0f0; }
+        .sources { margin-top: 14px; border-top: 1px solid #e5e5e5; padding-top: 12px; }
+        .sources-label { font-size: 11px; font-weight: 600; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .sources-label:hover { color: #888; }
+        .sources-toggle { font-size: 10px; }
+        .sources-content { display: none; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .sources-content.open { display: flex; }
+        .source-chunk { font-size: 12px; color: #777; background: #f0f0f0; border-left: 3px solid #ccc; padding: 8px 10px; border-radius: 0 4px 4px 0; line-height: 1.6; font-family: monospace; white-space: pre-wrap; }
+        .source-chunk-label { font-size: 10px; color: #aaa; margin-bottom: 3px; font-family: sans-serif; }
+        body.dark { background: #1a1a1a; }
+        body.dark .card { background: #2a2a2a; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark h1 { color: #f0f0f0; }
+        body.dark p.subtitle { color: #888; }
+        body.dark .card h2 { color: #ccc; }
+        body.dark textarea { background: #333; border-color: #444; color: #f0f0f0; }
+        body.dark textarea:focus { border-color: #888; }
+        body.dark .chat-item { background: #333; }
+        body.dark .chat-question { color: #888; }
+        body.dark .chat-answer { color: #ddd; }
+        body.dark .source-chunk { background: #222; border-left-color: #555; color: #999; }
+        body.dark .sources-label { color: #666; }
+        body.dark .sources { border-top-color: #444; }
+        body.dark #upload-status { color: #888; }
+        body.dark button { background: #f0f0f0; color: #111; }
+        body.dark button:hover { background: #ccc; }
+        body.dark button:disabled { background: #444; color: #888; }
+        body.dark .thinking { color: #666; }
+        body.dark .spinner { border-color: #444; border-top-color: #aaa; }
+        body.dark input[type="file"] { color: #aaa; }
+        #dark-toggle { position: fixed; top: 20px; right: 20px; background: #111; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        #dark-toggle:hover { background: #333; }
+        body.dark #dark-toggle { background: #f0f0f0; color: #111; }
+        body.dark #dark-toggle:hover { background: #ccc; }
+    </style>
+</head>
+<body>
+<button id="dark-toggle" onclick="toggleDark()">🌙 Dark</button>
+<div class="container">
+    <h1>RAG Application</h1>
+    <p class="subtitle">Upload a PDF and ask questions about it.</p>
+    <div class="card">
+        <h2>Step 1 - Upload your PDF</h2>
+        <input type="file" id="pdf-input" accept=".pdf">
+        <button onclick="uploadPDF()" id="upload-btn">Upload PDF</button>
+        <div id="upload-status"></div>
+    </div>
+    <div class="card">
+        <h2>Step 2 - Ask a question</h2>
+        <textarea id="question-input" placeholder="Ask a specific question about your document..."></textarea>
+        <button onclick="askQuestion()" id="ask-btn">Ask</button>
+        <div id="chat-history"></div>
+    </div>
+</div>
+<script>
+    function toggleDark() {
+        const isDark = document.body.classList.toggle("dark");
+        document.getElementById("dark-toggle").textContent = isDark ? "☀️ Light" : "🌙 Dark";
+        localStorage.setItem("darkMode", isDark);
+    }
+    if (localStorage.getItem("darkMode") === "true") {
+        document.body.classList.add("dark");
+        document.getElementById("dark-toggle").textContent = "☀️ Light";
+    }
+    async function uploadPDF() {
+        const fileInput = document.getElementById("pdf-input");
+        const status = document.getElementById("upload-status");
+        const btn = document.getElementById("upload-btn");
+        if (!fileInput.files[0]) { status.textContent = "Please select a PDF file first."; status.className = "error"; return; }
+        btn.disabled = true; btn.textContent = "Uploading...";
+        status.textContent = "Processing PDF - this may take a few seconds..."; status.className = "";
+        const formData = new FormData();
+        formData.append("pdf", fileInput.files[0]);
+        try {
+            const response = await fetch("/upload", { method: "POST", body: formData });
+            const data = await response.json();
+            status.textContent = "✓ " + data.message; status.className = "success";
+            document.getElementById("chat-history").innerHTML = "";
+        } catch (err) { status.textContent = "Upload failed."; status.className = "error"; }
+        btn.disabled = false; btn.textContent = "Upload PDF";
+    }
+    async function askQuestion() {
+        const questionInput = document.getElementById("question-input");
+        const chatHistory = document.getElementById("chat-history");
+        const btn = document.getElementById("ask-btn");
+        const question = questionInput.value.trim();
+        if (!question) return;
+        btn.disabled = true; btn.textContent = "Thinking..."; questionInput.disabled = true;
+        const thinkingEl = document.createElement("div");
+        thinkingEl.className = "thinking";
+        thinkingEl.innerHTML = '<span class="spinner"></span> Generating answer...';
+        chatHistory.insertBefore(thinkingEl, chatHistory.firstChild);
+        thinkingEl.scrollIntoView({ behavior: "smooth" });
+        try {
+            const response = await fetch("/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+            const data = await response.json();
+            chatHistory.removeChild(thinkingEl);
+            let sourcesHTML = "";
+            if (data.sources && data.sources.length > 0) {
+                const sourceId = "src-" + Date.now();
+                let chunksHTML = "";
+                data.sources.forEach(function(chunk, i) {
+                    chunksHTML += '<div class="source-chunk"><div class="source-chunk-label">Chunk ' + (i+1) + '</div>' + escapeHTML(chunk.substring(0, 250)) + '...</div>';
+                });
+                sourcesHTML = '<div class="sources"><div class="sources-label" onclick="toggleSources(\'' + sourceId + '\')"><span class="sources-toggle" id="arrow-' + sourceId + '">▶</span> Sources (' + data.sources.length + ' chunks retrieved)</div><div class="sources-content" id="' + sourceId + '">' + chunksHTML + '</div></div>';
+            }
+            const item = document.createElement("div");
+            item.className = "chat-item";
+            item.innerHTML = '<div class="chat-question">Q: ' + escapeHTML(question) + '</div><div class="chat-answer">' + formatAnswer(data.answer) + '</div>' + sourcesHTML;
+            chatHistory.insertBefore(item, chatHistory.firstChild);
+            item.scrollIntoView({ behavior: "smooth" });
+            questionInput.value = "";
+        } catch (err) {
+            chatHistory.removeChild(thinkingEl);
+            const item = document.createElement("div");
+            item.className = "chat-item";
+            item.innerHTML = '<div class="chat-answer" style="color:#dc2626">Something went wrong.</div>';
+            chatHistory.insertBefore(item, chatHistory.firstChild);
+        }
+        btn.disabled = false; btn.textContent = "Ask"; questionInput.disabled = false; questionInput.focus();
+    }
+    function formatAnswer(str) {
+        let safe = str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+        safe = safe.replace(/^(\d+)\.\s(.+)$/gm, '<div class="answer-item"><span class="answer-num">$1.</span> $2</div>');
+        safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        safe = safe.replace(/\n\n/g, '<br><br>');
+        safe = safe.replace(/\n/g, '<br>');
+        return safe;
+    }
+    function toggleSources(id) {
+        const content = document.getElementById(id);
+        const arrow = document.getElementById("arrow-" + id);
+        if (content.classList.contains("open")) { content.classList.remove("open"); arrow.textContent = "▶"; }
+        else { content.classList.add("open"); arrow.textContent = "▼"; }
+    }
+    function escapeHTML(str) { return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && e.target.id === "question-input" && !e.shiftKey) { e.preventDefault(); askQuestion(); }
+    });
+</script>
+</body>
+</html>
