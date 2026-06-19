@@ -12,15 +12,15 @@ def chunk_text(text, chunk_size=500, overlap=50):
 
 
 if __name__ == "__main__":
-    # import your read_pdf function from the other file
     import sys
     sys.path.append(".")
     from backend.read_pdf import read_pdf
 
-    # read the PDF
     raw_text = read_pdf("data/sample.pdf")
+    print("=" * 80)
+    print(raw_text[:2000])
+    print("=" * 80)
 
-    # chunk it
     chunks = chunk_text(raw_text)
 
     # see the results

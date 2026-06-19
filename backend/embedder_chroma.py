@@ -23,12 +23,35 @@ def store_chunks(chunks):
     return collection
 
 
-def retrieve_chunks(collection, question, n_results=3):
+METADATA_KEYWORDS = (
+    "author", "authors", "who wrote", "written by",
+    "title", "paper name", "document name",
+    "abstract", "affiliation", "university", "institute",
+)
+
+
+def _is_metadata_question(question):
+    q = question.lower()
+    return any(kw in q for kw in METADATA_KEYWORDS)
+
+
+def retrieve_chunks(collection, question, n_results=5):
     results = collection.query(
-        query_texts=[question],       # your question in plain text
-        n_results=n_results           # how many chunks to retrieve
+        query_texts=[question],
+        n_results=n_results
     )
-    return results["documents"][0]    # returns list of matching chunks
+    chunks = list(results["documents"][0])
+
+    # Title-page chunk holds authors/title/abstract; bibliography citations
+    # often rank higher for "who are the authors?" in pure semantic search.
+    if _is_metadata_question(question):
+        title_result = collection.get(ids=["chunk_0"], include=["documents"])
+        if title_result["documents"]:
+            title_chunk = title_result["documents"][0]
+            if title_chunk not in chunks:
+                chunks.insert(0, title_chunk)
+
+    return chunks
 
 
 if __name__ == "__main__":

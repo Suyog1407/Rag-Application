@@ -46,8 +46,10 @@ def ask():
     if collection is None:
         return jsonify({"answer": "Please upload a PDF first."})
 
-    data = request.get_json()
-    question = data["question"]
+    data = request.get_json(silent=True) or {}
+    question = data.get("question", "").strip()
+    if not question:
+        return jsonify({"answer": "Please enter a question."})
 
     retrieved = retrieve_chunks(collection, question)
     context = "\n\n".join(retrieved)
@@ -57,6 +59,10 @@ def ask():
 Use the context below to answer thoroughly. Include specific numbers, facts, and details from the document.
 If multiple pieces of context are relevant, combine them into a complete answer.
 If the answer is not in the context, say "This information is not in the document."
+
+For questions about authors: list the paper's own authors from the title page at the start of the document.
+Do NOT list authors from bibliography citations or references — those are cited works, not the paper's authors.
+Strip footnote numbers/superscripts from author names (e.g. "Suyog Kshirsagar1" → "Suyog Kshirsagar").
 
 When listing items, always use this exact format:
 1. [First item]
