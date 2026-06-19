@@ -5,19 +5,32 @@ sys.path.append(".")
 from backend.read_pdf import read_pdf
 from backend.chunker import chunk_text
 
+COLLECTION_NAME = "rag_documents"
+_chroma_client = None
+
+
+def reset_chroma_client():
+    global _chroma_client
+    _chroma_client = None
+
+
 def store_chunks(chunks):
-    # create a local ChromaDB client (saves data in a folder called chroma_db)
+    reset_chroma_client()
     client = chromadb.PersistentClient(path="chroma_db")
 
-    # create a collection — think of it like a table in a database
-    collection = client.get_or_create_collection(name="rag_documents")
+    try:
+        client.delete_collection(COLLECTION_NAME)
+    except (ValueError, chromadb.errors.NotFoundError):
+        pass
 
-    # store each chunk with a unique ID
-    for i, chunk in enumerate(chunks):
-        collection.add(
-            documents=[chunk],        # the actual text
-            ids=[f"chunk_{i}"]        # unique ID for each chunk
-        )
+    collection = client.create_collection(name=COLLECTION_NAME)
+    collection.add(
+        documents=chunks,
+        ids=[f"chunk_{i}" for i in range(len(chunks))],
+    )
+
+    global _chroma_client
+    _chroma_client = client
 
     print(f"Stored {len(chunks)} chunks in ChromaDB")
     return collection

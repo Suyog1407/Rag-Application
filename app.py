@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import os
 import sys
-import shutil
 sys.path.append(".")
 
 from backend.read_pdf import read_pdf
@@ -28,15 +27,18 @@ def upload():
     file_path = os.path.join(UPLOAD_FOLDER, "uploaded.pdf")
     file.save(file_path)
 
-    # delete old vector database so old chunks don't mix with new ones
-    if os.path.exists("chroma_db"):
-        shutil.rmtree("chroma_db")
+    collection = None
 
-    raw_text = read_pdf(file_path)
-    chunks = chunk_text(raw_text)
-    collection = store_chunks(chunks)
-
-    return jsonify({"message": f"PDF uploaded. {len(chunks)} chunks created."})
+    try:
+        raw_text = read_pdf(file_path)
+        chunks = chunk_text(raw_text)
+        if not chunks:
+            return jsonify({"message": "Could not extract text from this PDF."}), 400
+        collection = store_chunks(chunks)
+        return jsonify({"message": f"PDF uploaded. {len(chunks)} chunks created."})
+    except Exception as e:
+        collection = None
+        return jsonify({"message": f"Upload failed: {e}"}), 500
 
 
 @app.route("/ask", methods=["POST"])
@@ -88,4 +90,4 @@ Provide a detailed, accurate answer:"""
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
