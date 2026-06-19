@@ -2,7 +2,7 @@
 
 A full-stack **Retrieval-Augmented Generation (RAG)** web app that lets you upload any PDF and chat with it. Ask questions in natural language — the system retrieves relevant passages from your document and generates grounded answers using a local LLM.
 
-![RAG Application Screenshot](assets/screenshot.png)
+![RAG Application Screenshot](assets/Screenshot.png)
 
 > **100% local · No paid APIs · Privacy-first** — your documents never leave your machine.
 
