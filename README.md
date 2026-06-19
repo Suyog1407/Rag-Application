@@ -1,4 +1,4 @@
-# RAG Application
+# RAG-Based Document Q&A System
 
 A full-stack **Retrieval-Augmented Generation (RAG)** web app that lets you upload any PDF and chat with it. Ask questions in natural language — the system retrieves relevant passages from your document and generates grounded answers using a local LLM.
 
